@@ -1,0 +1,57 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Nothing game-derived may ever be tracked. See PROVENANCE.md.
+      - name: Provenance
+        run: ./scripts/check-provenance.sh
+
+      # Marble.jsx and both registry items are generated from Marble.tsx.
+      # Regenerate and fail if anything drifted from its source.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: React variants are in sync
+        run: |
+          node react/build.mjs
+          if ! git diff --quiet -- react/; then
+            echo "::error::react/ generated files are stale; run 'node react/build.mjs' and commit"
+            git diff --stat
+            exit 1
+          fi
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v5

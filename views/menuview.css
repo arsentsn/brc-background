@@ -1,0 +1,204 @@
+/* ============================================================================
+   Reconstructed screens: the view tier (docs/SCREENS.md)
+   ============================================================================
+   Loaded by every build (see the loader in index.html): prefab geometry and timings, no
+   game pixels (PROVENANCE.md). The art-tier rules are inert without their sprites, since
+   nothing they position has a src until views/menuview.js has probed for it. The two
+   container base rules live in index.html, so a build without this file hides the markup. */
+
+/* ---- menu view: the game's central-menu screen. The items, their measured positions
+   and the hover backdrop need no assets; the overlay, font cut and audio do. */
+#menuview.on { display:block; }
+#mv_overlay { position:absolute; inset:0; width:100%; height:100%; }
+/* Never laid out until the script sets a src: an empty img would otherwise reserve its
+   alt box over the marble. */
+#mv_overlay:not([src]) { display:none; }
+/* 'InductionLocal' is the game's own cut of Induction, registered by the script from
+   assets/menu/induction.ttf. Without it these fall back to monospace. */
+.mv_item { position:absolute; font-family:'InductionLocal',monospace; color:rgb(254,137,0);
+           line-height:1; white-space:nowrap; font-size:3.48vh; letter-spacing:0.011em;
+           pointer-events:auto; }
+/* highlighted: white glyphs over a fat offset orange backdrop (SDF-underlay style),
+   built by the #hlbackdrop SVG filter */
+.mv_item.hl { color:#fff; filter:url(#hlbackdrop); }
+#mv_start   { left:5.00%; top:75.96%; }
+#mv_options { left:5.00%; top:81.98%; }
+#mv_quit    { left:5.00%; top:92.07%; }
+/* ---- menu intro animation (needs the intro sprites) ----------------
+   Source: MainMenuUINew.prefab holds 13 DOTweenAnimation components, all eased
+   OutQuad, and cubic-bezier(1/3,2/3,2/3,1) is OutQuad exactly (y = 2t - t^2). Five panels
+   Move from offscreen marker rects (useTargetAsV3 pointing at the "SlideIn" markers under
+   MainMenuAnimation); eight elements Fade from alpha 0. The rects and deltas below are
+   those markers as 1080p percentages (vw = px/19.2, vh = px/10.8).
+   The marble windows carry the swirl material, whose pattern is fragCoord-based, so a
+   moving sprite moves only the visible window over a screen-anchored field. Reproduced by
+   lifting the live canvas above these layers and masking it with the two sprite alphas. */
+.iv { position:absolute; display:none; }
+#menuview.intro .iv { display:block; }
+#menuview.intro #mv_overlay { visibility:hidden; }
+/* the prefab's BackgroundImage is a flat colour, not a sprite */
+#iv_bg { inset:0; background:rgb(223,222,192); }
+.ivc { overflow:hidden; }                       /* the fading art = crops of the overlay */
+.ivc img { position:absolute; }
+#iv_band  { left:3.6719%;  top:74.5204%; width:86.3703%; height:13.3481%; }
+#iv_slabL { left:60.2161%; top:3.2648%;  width:29.8401%; height:98.0074%; }
+#iv_slabR { left:73.8156%; top:0.0056%;  width:17.6094%; height:73.288%;  }
+#iv_header   { left:61.4589%; top:5.112%;   width:28.5833%; height:4.4463%; }
+#iv_header   img { width:349.8542%;  height:2249.0629%; left:-215.0164%;  top:-114.9729%; }
+#iv_brain    { left:91.5432%; top:80.9407%; width:7.3609%;  height:16.025%; }
+#iv_brain    img { width:1358.5226%; height:624.025%;   left:-1243.6355%; top:-505.0904%; }
+#iv_nums     { left:90.4938%; top:1.3861%;  width:9.5063%;  height:4.2278%; }
+#iv_nums     img { width:1051.9395%; height:2365.3088%; left:-951.9395%;  top:-32.7858%; }
+#iv_graffiti { left:41.676%;  top:57.625%;  width:17.787%;  height:15.4583%; }
+#iv_graffiti img { width:562.209%;   height:646.9003%;  left:-234.3065%;  top:-372.7763%; }
+#iv_version  { left:1.1568%;  top:70.7231%; width:40.7167%; height:3.8713%; }
+#iv_version  img { width:245.5997%;  height:2583.1141%; left:-2.841%;     top:-1826.8596%; }
+/* prefab timings: band + left slab 0.66s @0s, right slab 0.66s @0.1s, marble windows
+   0.45s @0.4s, fades 0.4s @0.6s, version 0.1s @0.8s. --ivt shifts every delay left,
+   which is what freezes a mid-flight frame for ?intro=<t>. */
+#menuview.intro #iv_band  { animation: iv_band  .66s cubic-bezier(.33333,.66667,.66667,1) calc(0s  - var(--ivt,0s)) both; }
+#menuview.intro #iv_slabL { animation: iv_slabL .66s cubic-bezier(.33333,.66667,.66667,1) calc(0s  - var(--ivt,0s)) both; }
+#menuview.intro #iv_slabR { animation: iv_slabR .66s cubic-bezier(.33333,.66667,.66667,1) calc(.1s - var(--ivt,0s)) both; }
+#menuview.intro .ivc,
+#menuview.intro .mv_item  { animation: iv_fade  .4s  cubic-bezier(.33333,.66667,.66667,1) calc(.6s - var(--ivt,0s)) both; }
+#menuview.intro #iv_version { animation-duration:.1s; animation-delay:calc(.8s - var(--ivt,0s)); }
+/* An SVG <mask>, not CSS mask-image: Chrome treats mask-image as a CORS fetch, which
+   fails silently from a file:// page, while an <image> inside an svg mask loads under
+   image rules. Positions come from JS, since SVG geometry attributes take no vw/vh.
+   pointer-events go with it: a mask paints but does not hit-test, so a fullscreen canvas
+   at z-index 6 would otherwise swallow every click meant for the items underneath. */
+#gl.winmask, #gl.winmask2 { pointer-events:none; }
+#gl.winmask { z-index:6; -webkit-mask:url(#winmask); mask:url(#winmask); }
+body.ivfreeze #menuview.intro .iv, body.ivfreeze #menuview.intro .mv_item { animation-play-state:paused !important; }
+/* ---- exit: the intro's own timeline, mirrored ----
+   Invented, and the only invented motion in this file: the prefab carries no outro, so
+   the sequencing is this project's while the geometry, markers and curves stay the game's.
+   Each span [s, s+d] mirrors to [T-(s+d), T-s] with T = 1 s (docs/SCREENS.md). */
+#menuview.outro #mv_overlay { visibility:hidden; }
+#menuview.outro .iv { display:block; }
+#menuview.outro #iv_band  { animation: iv_band  .66s cubic-bezier(.33333,.66667,.66667,1) calc(.34s - var(--ivt,0s)) both reverse; }
+#menuview.outro #iv_slabL { animation: iv_slabL .66s cubic-bezier(.33333,.66667,.66667,1) calc(.34s - var(--ivt,0s)) both reverse; }
+#menuview.outro #iv_slabR { animation: iv_slabR .66s cubic-bezier(.33333,.66667,.66667,1) calc(.24s - var(--ivt,0s)) both reverse; }
+#menuview.outro .ivc,
+#menuview.outro .mv_item  { animation: iv_fade  .4s  cubic-bezier(.33333,.66667,.66667,1) calc(0s - var(--ivt,0s)) both reverse; }
+#menuview.outro #iv_version { animation-duration:.1s; animation-delay:calc(.1s - var(--ivt,0s)); }
+/* Tail of the exit. The mirrored timeline moves the panels offscreen but leaves #iv_bg
+   covering the viewport, because the prefab's background never moves. Tearing down there
+   hard-cuts to the fullscreen marble, so instead the mask is dropped, returning the canvas
+   to fullscreen behind the cream, and the cream is dissolved off it. */
+#menuview.dissolve #iv_bg { animation: iv_dissolve .26s cubic-bezier(.33333,.66667,.66667,1) both; }
+@keyframes iv_dissolve { from { opacity:1; } to { opacity:0; } }
+body.ivfreeze #menuview.outro .iv, body.ivfreeze #menuview.outro .mv_item { animation-play-state:paused !important; }
+@keyframes iv_band  { from { transform:translate(-93.3573vw, .0519vh); } to { transform:none; } }
+@keyframes iv_slabL { from { transform:translate(.0151vw, 100.3259vh); } to { transform:none; } }
+@keyframes iv_slabR { from { transform:translate(.0854vw, -89.737vh);  } to { transform:none; } }
+@keyframes iv_fade  { from { opacity:0; } to { opacity:1; } }
+/* ---- slate view: the chapter-select screen "start game" leads to. Same architecture as
+   the menu view: the game's UI pixels (both marble windows punched out per-pixel, slot
+   and back texts erased) over the live marble, DOM texts in its menu font on top. The
+   marble is the same screen-anchored fullscreen field with the splash material. Slot rows
+   read "blank slate" (the localized SAVESLOT_EMPTY_SLOT). Source:
+   SaveSlotMenuUI.prefab plus decompiled SaveSlotMenu / SelectEnlargeButton; geometry
+   measured off the 1920x1080 screenshot and verified to <=1px (docs/SCREENS.md). */
+#slateview.on { display:block; }
+#sv_overlay { position:absolute; inset:0; width:100%; height:100%; }
+/* TMP fontSize is 41 here against the menu items' 38, so 3.48vh scales to 3.7547vh; same
+   font, same left-aligned glyph boxes (x=919px, caps rows y 699/788/880/996 at 1080p).
+   Initial colour is the prefab's m_fontColor rgb(254,139,0); the first hover-exit sets
+   deselectedColor rgb(254,137,0), as the game's DeselectText does. */
+.sv_item { position:absolute; font-family:'InductionLocal',monospace; color:rgb(254,139,0);
+           line-height:1; white-space:nowrap; font-size:3.7547vh; letter-spacing:0.011em;
+           pointer-events:auto; }
+.sv_item.hl { color:#fff; filter:url(#hlbackdrop2); }  /* the 41/38-scaled backdrop */
+#sv_slot1 { left:47.865%; top:64.3526%; }
+#sv_slot2 { left:47.865%; top:72.5926%; }
+#sv_slot3 { left:47.865%; top:81.1126%; }
+#sv_back  { left:47.865%; top:91.8526%; }
+/* delete X's: SelectEnlargeButton, a 42x42 sprite that swaps to a highlighted sprite and
+   enlarges to 48x48 around its centre on hover (prefab enlargeToSize). Centres
+   (1779,718)/(1779,807.5)/(1777,899); slot 3's prefab anchor is 0.969 against the others'
+   0.9704, hence its 2px offset, which the screenshot confirms. */
+.sv_x { position:absolute; pointer-events:auto; cursor:default; }
+.sv_x img { display:block; width:3.8889vh; height:3.8889vh; transform:translate(-50%,-50%); }
+.sv_x.hl img { width:4.4444vh; height:4.4444vh; }
+#sv_x1 { left:92.7083%; top:66.5741%; }
+#sv_x2 { left:92.7083%; top:74.8611%; }
+#sv_x3 { left:92.6042%; top:83.3333%; }
+/* ---- slate intro: SaveSlotMenuUI.prefab's 16 DOTweenAnimations, all OutQuad. Three
+   slides at 0s over 0.66s (selection bar from the right +1588.8px, right cream slab from
+   below +1106.3px, left slab from above -940.7px), the two marble windows at 0.4s over
+   0.45s (bottom +967.7px up, top -130.6px down) as the JS-driven #winmask2, and eleven
+   fades at 0.6s over 0.4s (icon, "slate menu", SELECT YOUR SLATE, 020, slot texts, X's,
+   back). Static base is the prefab's flat BackgroundImage rgb(223,222,192). The fading art
+   is crops of the overlay, so the 1.06s end-swap to the normal stack is seamless. */
+.iv2 { position:absolute; display:none; }
+#slateview.intro .iv2 { display:block; }
+#slateview.intro #sv_overlay { visibility:hidden; }
+#sv_bg { inset:0; background:rgb(223,222,192); }
+#sv_bar   { left:20.0919%; top:62.6216%; width:74.8330%; height:24.4753%; }
+#sv_slabR { left:15.3192%; top:2.7446%;  width:26.0287%; height:99.0331%; }
+#sv_slabL { left:9.2521%;  top:-0.0923%; width:17.4976%; height:81.4000%; }
+#sv_ivicon   { left:3.0875%;  top:77.3111%; width:5.0418%;  height:18.8961%; }
+#sv_ivicon   img { width:1983.47%; height:529.20%;  left:-61.24%;  top:-409.13%; }
+#sv_ivheader { left:28.125%;  top:9.0741%;  width:12.6042%; height:5.0926%; }
+#sv_ivheader img { width:793.39%;  height:1963.64%; left:-223.14%; top:-178.18%; }
+#sv_ivsub    { left:42.6042%; top:59.0741%; width:10.8333%; height:2.5926%; }
+#sv_ivsub    img { width:923.08%;  height:3857.14%; left:-393.27%; top:-2278.57%; }
+#sv_ivnums   { left:41.8229%; top:5.8333%;  width:10.8854%; height:5.2778%; }
+#sv_ivnums   img { width:918.66%;  height:1894.74%; left:-384.21%; top:-110.53%; }
+#slateview.intro #sv_bar   { animation: sv_bar   .66s cubic-bezier(.33333,.66667,.66667,1) calc(0s - var(--ivt,0s)) both; }
+#slateview.intro #sv_slabR { animation: sv_slabR .66s cubic-bezier(.33333,.66667,.66667,1) calc(0s - var(--ivt,0s)) both; }
+#slateview.intro #sv_slabL { animation: sv_slabL .66s cubic-bezier(.33333,.66667,.66667,1) calc(0s - var(--ivt,0s)) both; }
+#slateview.intro .ivc,
+#slateview.intro .sv_item,
+#slateview.intro .sv_x { animation: iv_fade .4s cubic-bezier(.33333,.66667,.66667,1) calc(.6s - var(--ivt,0s)) both; }
+#gl.winmask2 { z-index:6; -webkit-mask:url(#winmask2); mask:url(#winmask2); }
+body.ivfreeze #slateview.intro .iv2, body.ivfreeze #slateview.intro .sv_item,
+body.ivfreeze #slateview.intro .sv_x { animation-play-state:paused !important; }
+@keyframes sv_bar   { from { transform:translateX(82.751vw); }   to { transform:none; } }
+@keyframes sv_slabR { from { transform:translateY(102.4333vh); } to { transform:none; } }
+@keyframes sv_slabL { from { transform:translateY(-87.1041vh); } to { transform:none; } }
+
+/* ============================================================================
+   .recon: the chrome, rebuilt without the sprites
+   ============================================================================
+   Set by views/menuview.js when the art is not reachable. Not a fallback skin: every
+   sliding panel in both intro timelines measures as one flat colour at 100% coverage with
+   rounded ends.
+
+     intro_band  1582x147   intro_slab_left 463x1398   intro_slab_right 293x1203
+     slate_bar   1455x285   slate_slab_left 358x1080   slate_slab_right 263x1080
+       all rgb(236,232,203); both window masks 100% white, one rounded end each
+
+   So a box of that colour at the rect already declared above is the sprite, and the radii
+   here are those sprites' own as a share of their height. The layers keep the same rects,
+   keyframes and prefab timings; only the paint source changes.
+   What cannot come along is the drawn art: the brain, graffiti tag, header and version
+   lettering. That lives in the overlay crops (.ivc), hidden below. See PROVENANCE.md. */
+#menuview.recon .iv, #slateview.recon .iv2 { display:block; }
+/* the fading art is crops of the game's overlay: no overlay, nothing to crop */
+#menuview.recon .ivc, #slateview.recon .ivc { display:none; }
+/* the panels: one authored UI colour, already this page's (see #panel in index.html) */
+#menuview.recon #iv_band,  #menuview.recon #iv_slabL,  #menuview.recon #iv_slabR,
+#slateview.recon #sv_bar,  #slateview.recon #sv_slabL, #slateview.recon #sv_slabR {
+  background:rgb(236,232,203);
+}
+#menuview.recon  #iv_band  { border-radius:2.4vh; }
+#menuview.recon  #iv_slabL { border-radius:1.9vh; }
+#menuview.recon  #iv_slabR { border-radius:1.8vh; }
+#slateview.recon #sv_bar   { border-radius:2.1vh; }
+#slateview.recon #sv_slabL { border-radius:1.7vh; }
+#slateview.recon #sv_slabR { border-radius:1.7vh; }
+/* Without the overlay there is nothing to paint the background, so the prefab's flat base
+   stays up for good rather than only under .intro. */
+#menuview.recon #iv_bg, #slateview.recon #sv_bg { display:block; }
+/* Two bars at 45 degrees in the menu's interactive orange stand in for the sprite pair;
+   .hl still enlarges, driven by the same rule below. */
+#slateview.recon .sv_x img { display:none; }
+#slateview.recon .sv_x { width:3.8889vh; height:3.8889vh; margin:-1.9444vh 0 0 -1.9444vh; }
+#slateview.recon .sv_x::before, #slateview.recon .sv_x::after {
+  content:''; position:absolute; left:50%; top:50%; width:0.5vh; height:82%;
+  background:rgb(255,134,0); border-radius:0.25vh; }
+#slateview.recon .sv_x::before { transform:translate(-50%,-50%) rotate(45deg); }
+#slateview.recon .sv_x::after  { transform:translate(-50%,-50%) rotate(-45deg); }
+#slateview.recon .sv_x.hl { width:4.4444vh; height:4.4444vh; margin:-2.2222vh 0 0 -2.2222vh; }
